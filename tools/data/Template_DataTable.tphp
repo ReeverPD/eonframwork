@@ -1,0 +1,110 @@
+<?php
+/**
+ * Copyright (c) 2011
+ *      Reever Pesquisa e Desenvolvimento (ReeverP&D).  All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *  3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *      This product includes software developed by the University of
+ *      California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * @author Iuri Andreazza {iuri@reeverpd.com.br}
+ * @since 03/2013
+ * @version 0.0.1-alpha
+ *
+ */
+
+require_once('reever/mvc/ReeverAttributeMetadata.php');
+
+/**
+ * {Description_Class}
+ *
+ *
+ * @package {PACKAGE}
+ * @subpackage {SUBPACKAGE}
+ * @since {SINCE}
+ * @copyright Reever Pesquisa e Desenvolvimento (Reever P&D)
+ * @filesource {T_NAME}.php
+ * @license BSD
+ * @version  0.1.0-alpha
+ * @author  Iuri Andreazza {iuri@reeverpd.com.br}
+ */
+class {T_NAME} extends Zend_Db_Table_Abstract{
+
+	protected $_name = '{T_NAME}';
+
+	public function __construct($config = null){
+		if($config == null){
+			EONDataPortal::getSQLDataConnection('lgn_{T_NAME}');
+			$config = array('db'=>$this->__databaseGateway->getConnection());
+		}
+		parent::__construct($config);
+		$this->_setupMetadata();
+	}
+
+
+	public function save({M_NAME} $obj)
+	{
+		//Create an associative array
+		//of the data you want to update
+		$data = array(
+         'email' => $user_object->email,
+         'password' => $user_object->password,
+		);
+		 
+		//Check if the user object has an ID
+		//if no, it means the user is a new user
+		//if yes, then it means you're updating an old user
+		if( is_null($user_object->id) ) {
+			$data['salt'] = $user_object->salt;
+			$data['date_created'] = date('Y-m-d H:i:s');
+			$this->_entity->insert($data);
+		} else {
+			$this->_entity->update($data, array('id = ?' => $user_object->id));
+		}
+	}
+
+	public function getById($id)
+	{
+		//use the Table Gateway to find the row that
+		//the id represents
+		$result = $this->_entity->find($id);
+		 
+		//if not found, throw an exsception
+		if( count($result) == 0 ) {
+			throw new Exception('User not found');
+		}
+		 
+		//if found, get the result, and map it to the
+		//corresponding Data Object
+		$row = $result->current();
+		$obj = new {M_NAME}($row);
+		 
+		//return the user object
+		return $obj;
+	}
+
+}
