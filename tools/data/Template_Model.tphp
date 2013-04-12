@@ -39,6 +39,7 @@
 
 require_once('reever/mvc/ReeverBaseModel.php');
 require_once('reever/mvc/ReeverAttributeMetadata.php');
+require_once('Models/table/{T_NAME}.php');
 
 /**
  * {Description_Class}
@@ -76,5 +77,26 @@ class {M_NAME} extends ReeverBaseModel
    protected function init(){
 		{PROPRIEDADES_META}
    }
+   
+   {PROPRIEDADES_VINCULADOS}
+   
+   
+   	/**
+	 * (non-PHPdoc)
+	 * @see ReeverBaseModel::save()
+	 */
+   	public function save()
+	{
+		parent::save($this);
+	}
+	
+	/**
+	 * (non-PHPdoc)
+	 * @see ReeverBaseModel::getById()
+	 */
+	public function getById($id)
+	{
+		return parent::getById($id);
+	}
    
 }

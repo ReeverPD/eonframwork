@@ -39,6 +39,9 @@
  * @version 0.0.1-alpha
  */
 
+error_reporting(E_ERROR);
+ini_set('display_errors', 1);
+
 $argc = $_SERVER['argc'];
 $argv = $_SERVER['argv'];
 
@@ -87,7 +90,7 @@ $WORD		= '[a-zA-Z][a-zA-Z0-9_]*';
 $N_REAL		= "$DIGIT+.$DIGIT+";
 $N_INT		= "$DIGIT+";
 
-$CL_TYPES	= '(VARCHAR|INTEGER|REAL|CHAR|BIT|VARCHAR\('.$N_INT.'\))';
+$CL_TYPES	= '(VARCHAR|INTEGER|REAL|CHAR|BIT|INT|VARCHAR\('.$N_INT.'\))';
 $CL_ENGINES	= '(InnoDB|MyISAM)';
 
 $KW_CREATE 	= '(CREATE|create)';
@@ -98,17 +101,11 @@ $KW_EX		= '(EXISTS|exists)';
 $KW_NULL	= '(NULL|null)';
 
 $O_OPN		= '`';
-$L_PAR		= '(';
-$R_PAR		= ')';
+$L_PAR		= '\(';
+$R_PAR		= '\)';
 $STMT_END	= ';';
 
 $R_SPACE 	= "[ ]+";
-
-$CR_TABLE	= $KW_CREATE."[ ]+".$KW_TABLE."[ ]+(".$KW_IF."[ ]+$KW_NOT"."[ ]+$KW_EX"."[ ]+)?";
-$CL_DCL_S	= $O_OPN.$WORD.$O_OPN.'.'.$O_OPN.$WORD.$O_OPN;
-$CL_DCL		= $O_OPN.$WORD.$O_OPN;
-
-$CC_DCL 	= $O_OPN.$WORD.$O_OPN.$R_SPACE.$CL_TYPES;
 
 $KW_PK		= 'PRIMARY KEY';
 $KW_IDX		= 'INDEX';
@@ -118,6 +115,16 @@ $KW_REF		= 'REFERENCES';
 $KW_OD		= 'ON DELETE';
 $KW_OU		= 'ON UPDATE';
 $KW_ENGINE 	= "ENGINE = $CL_ENGINES;";
+
+
+$CR_TABLE	= $KW_CREATE."[ ]+".$KW_TABLE."[ ]+(".$KW_IF."[ ]+$KW_NOT"."[ ]+$KW_EX"."[ ]+)?";
+$CL_DCL_S	= $O_OPN.$WORD.$O_OPN.'.'.$O_OPN.$WORD.$O_OPN;
+$CL_DCL		= $O_OPN.$WORD.$O_OPN;
+
+$CC_DCL 	= $O_OPN.$WORD.$O_OPN.$R_SPACE.$CL_TYPES;
+$PK_DCL		= $KW_PK.$R_SPACE.$L_PAR.$O_OPN.$WORD.$O_OPN.$R_PAR;
+$FK_DCL		= $KW_FK.$R_SPACE.$L_PAR.$O_OPN.$WORD.$O_OPN.$R_SPACE.$R_PAR;
+$RF_DCL		= $KW_REF.$R_SPACE.$O_OPN.$WORD.$O_OPN.'\.'.$O_OPN.'('.$WORD.')'.$O_OPN.$R_SPACE.$L_PAR.$O_OPN.'('.$WORD.')'.$O_OPN.$R_SPACE.$R_PAR;
 
 
 
@@ -135,6 +142,8 @@ $rule_tableName 			= "{T_NAME}";
 $rule_modelName 			= "{M_NAME}";
 $rule_modelProperties 		= "{PROPRIEDADES}";
 $rule_modelPropertiesMeta 	= "{PROPRIEDADES_META}";
+$rule_modelPropertiesVinc 	= "{PROPRIEDADES_VINCULADOS}";
+
 
 
 $modelStr = "";
@@ -142,7 +151,7 @@ $tableStr = "";
 $model = "";
 $table = '';
 $tSufix = "";
-foreach($fString as $line){
+foreach($fString as $numLine => $line){
 	$line = trim($line);
 	//Ignorar Linhas comentarios, ou instruções do SQL, ou mesmo linhas em branco.
 	if($line{0}.$line{1} == '--'){
@@ -159,6 +168,7 @@ foreach($fString as $line){
 		//Encontrou o criar Table (INICIAR ESTADO de DETECTAR)
 		if(preg_match("/".$CR_TABLE."/i", $line, $matchs))
 		{
+			echo "---------\n";
 			$state = S_CREATE_TABLE;
 			
 			if(preg_match("/".$CL_DCL_S."/i", $line, $matchs))
@@ -174,7 +184,8 @@ foreach($fString as $line){
 			
 			if($table != "")
 			{
-				$names = explode('_',$table);
+				
+				/*$names = explode('_',$table);
 				array_shift($names);
 				foreach($names as $k => $name)
 				{
@@ -183,7 +194,9 @@ foreach($fString as $line){
 				}
 				
 				$tSufix = array_shift(explode('_', $table));
-				$model = strtoupper($tSufix).'_'.implode('', $names).'Model';
+				$model = strtoupper($tSufix).'_'.implode('', $names).'Model';*/
+				
+				$model = getModelName($table);
 				
 				$tableStr = $templateDataTable;
 				$tableStr = str_replace($rule_tableName, $table, $tableStr);
@@ -193,12 +206,13 @@ foreach($fString as $line){
 				$modelStr = str_replace($rule_tableName, $table, $modelStr);
 				$modelStr = str_replace($rule_modelName, $model, $modelStr);
 				file_put_contents($dirT.'/'.$table.'.php', $tableStr);
-
+				echo "Iniciando Parser dos Objetos\n";
 			}
 			
 		}
 	}else if($state == S_CREATE_TABLE){
 		
+		//Regra da COLUNA
 		if(preg_match("/".$CC_DCL."/i", $line, $matchs)){
 			
 			$dlcLine = array_shift($matchs);
@@ -216,38 +230,121 @@ foreach($fString as $line){
 			}
 			
 			$dlcLine = trim(strtoupper($dlcLine{0}).substr($dlcLine, 1));
+			echo "\tAtributo: $dlcLine -> $cLine \n";
 			
-			
-			$sAttr = "\t".'protected $'.$dlcLine.";\n";
-			$sAttrMetadata = "\n\t\t\t".'$attrMetadata = new ReeverAttributeMetadata();'."\n";
-			$sAttrMetadata .= "\t\t\t".'$attrMetadata->attrName = "'.$dlcLine.'";'."\n";
-			$sAttrMetadata .= "\t\t\t".'$attrMetadata->colName = "'.$cLine.'";'."\n";
-			$sAttrMetadata .= "\t\t\t".'$attrMetadata->dataType = "'.$dType.'";'."\n";
-			$sAttrMetadata .= "\t\t\t".'$attrMetadata->colType = "'.$dType.'";'."\n";
-			$sAttrMetadata .= "\t\t\t".'$attrMetadata->needValidate = true;'."\n";
+			$sAttr[$dlcLine] = "\t".'protected $'.$dlcLine.";\n";
+			$sAttrMetadata[$dlcLine] = "\n\t\t\t".' $this->_atributosMetadata[] = $attrMetadata = new ReeverAttributeMetadata();'."\n";
+			$sAttrMetadata[$dlcLine] .= "\t\t\t".'$attrMetadata->attrName = "'.$dlcLine.'";'."\n";
+			$sAttrMetadata[$dlcLine] .= "\t\t\t".'$attrMetadata->colName = "'.$cLine.'";'."\n";
+			$sAttrMetadata[$dlcLine] .= "\t\t\t".'$attrMetadata->dataType = "'.$dType.'";'."\n";
+			$sAttrMetadata[$dlcLine] .= "\t\t\t".'$attrMetadata->colType = "'.$dType.'";'."\n";
+			$sAttrMetadata[$dlcLine] .= "\t\t\t".'$attrMetadata->needValidate = true;'."\n";
 			if(preg_match("/".$CC_DCL."/i", $line, $matchs)){
-				$sAttrMetadata .= "\t\t\t".'$attrMetadata->required = true;'."\n";
+				$sAttrMetadata[$dlcLine] .= "\t\t\t".'$attrMetadata->required = true;'."\n";
 			}else{
-				$sAttrMetadata .= "\t\t\t".'$attrMetadata->required = false;'."\n";
+				$sAttrMetadata[$dlcLine] .= "\t\t\t".'$attrMetadata->required = false;'."\n";
 			}
 			
-			$modelStr = str_replace($rule_modelProperties, $sAttr.$rule_modelProperties, $modelStr);
-			$modelStr = str_replace($rule_modelPropertiesMeta, $sAttrMetadata.$rule_modelPropertiesMeta, $modelStr);
+			//var_dump($dlcLine);
+			//var_dump($sAttrMetadata[$dlcLine]);
+		}
+
+		//Regra do PK
+		if(preg_match("/".$PK_DCL."/i", $line, $matchs)){
 			
+			$dlcLine = array_shift($matchs);
+			$dlcLine = str_replace($O_OPN, '', $dlcLine);
+			$dlcLine = str_replace($KW_PK, '', $dlcLine);
+			$dlcLine = str_replace("(", '', $dlcLine);
+			$dlcLine = str_replace(")", '', $dlcLine);
+			//Nome da coluna é separada por _
+			if(strpos($dlcLine, '_') !== false){
+				$idrs = explode('_', $dlcLine);
+				$dlcLine = "";
+				foreach($idrs as $id){
+					$dlcLine .= strtoupper($id{0}).substr($id, 1);
+				}	
+			}
+			$dlcLine = trim(strtoupper($dlcLine{0}).substr($dlcLine, 1));
+			$sAttrMetadata[$dlcLine] .= "\t\t\t".'$attrMetadata->isPrimary = true;'."\n";
+			//var_dump($dlcLine);
+			//var_dump($sAttrMetadata[$dlcLine]);
+			//var_dump($dlcLine);			
 			//var_dump($matchs);
+		}
+		
+		//Regra de FK
+		if(preg_match("/".$FK_DCL."/i", $line, $matchs)){
+			
+			$dlcLine = array_shift($matchs);
+			$dlcLine = str_replace($O_OPN, '', $dlcLine);
+			$dlcLine = str_replace($KW_FK, '', $dlcLine);
+			$dlcLine = str_replace("(", '', $dlcLine);
+			$cl = trim($dlcLine = str_replace(")", '', $dlcLine));
+			//Nome da coluna é separada por _
+			if(strpos($dlcLine, '_') !== false){
+				$idrs = explode('_', $dlcLine);
+				$dlcLine = "";
+				foreach($idrs as $id){
+					$dlcLine .= strtoupper($id{0}).substr($id, 1);
+				}	
+			}
+			$dlcLine = trim(strtoupper($dlcLine{0}).substr($dlcLine, 1));
+			$sAttrMetadata[$dlcLine] .= "\t\t\t".'$attrMetadata->isFK = true;'."\n";
+			
+			//Consumir Linha seguinte esperando um references
+			//var_dump(next($fString));
+			//var_dump($RF_DCL);
+			if(preg_match("/".$RF_DCL."/i", trim($fString[$numLine+1]), $matchs)){
+				array_shift($matchs);
+				$tableVinculado = $matchs[0];
+				$modelVinculado = getModelName($tableVinculado);
+				$colVinculado = $matchs[1];
+				$colVinculadoFilho = $cl;
+
+				$propVinc = "
+				/**
+				 * Retorna o $modelVinculado listado como FK no banco
+				 * @return $modelVinculado
+				 */
+				function get$dlcLine(){
+					if(is_null(\$this->$dlcLine)){
+						\$this->$dlcLine =  new $modelVinculado(new $tableVinculado());
+						return \$this->{$dlcLine}->getById(\$this->$dlcLine);
+					}else{
+						return \$this->$dlcLine;
+					}
+				}
+				";
+				
+				$modelStr = str_replace($rule_modelPropertiesVinc, $rule_modelPropertiesVinc.$propVinc, $modelStr);
+				//var_dump($modelVinculado);
+				//$fString[$numLine+1]
+				//var_dump($fString[$numLine+1]);
+				//var_dump($matchs);
+				//var_dump($dlcLine);
+				//var_dump($cl);
+			}
+			
+			
 		}
 		
 		//Encontrar o Final do Create Table
 		if(preg_match("/".$KW_ENGINE."/i", $line, $matchs)){
 			if($model != ''){
 				//Limpa as expansões finais
-				$modelStr = str_replace($rule_modelProperties, '', $modelStr);
-				$modelStr = str_replace($rule_modelPropertiesMeta, '', $modelStr);
+				echo "Gerando Model -> $model \n";
+				echo "Gerando Table -> $table \n";
+				$modelStr = str_replace($rule_modelPropertiesVinc, '', $modelStr);
+				$modelStr = str_replace($rule_modelProperties, implode("\n", $sAttr), $modelStr);
+				$modelStr = str_replace($rule_modelPropertiesMeta, implode("\n", $sAttrMetadata), $modelStr);
 				file_put_contents($dirM.'/'.$model.'.php', $modelStr);
 				$model = '';
 			}
 			$state = S_INITIAL;
-		} 
+		}
+		
+		
 		
 	}
 
@@ -257,6 +354,23 @@ foreach($fString as $line){
 
 echo "\n\n\n\n";
 
+function getModelName($table){
+	$names = explode('_',$table);
+	array_shift($names);
+	
+	foreach($names as $k => $name)
+	{
+		$name = strtoupper($name{0}).substr($name, 1);
+		$names[$k] = $name;
+	}
+	
+	$tSufix = array_shift(explode('_', $table));
+	return strtoupper($tSufix).'_'.implode('', $names).'Model';
+}
+
+function GetTableName(){
+	
+}
 
 function Menu(){
 	echo "Uso do Script\n";

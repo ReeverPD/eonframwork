@@ -84,17 +84,74 @@ class ReeverBaseModel{
 	 * Carrega 
 	 * 
 	 */
-	public function BindModelEntity($entity){
-		
+	public function BindModelEntity($entity = null){
+		if(is_null($entity)){
+			if(is_null($this->_entity)){
+				throw new Exception('Não é possivel dar bind da entidade pois ela é nula', 500);
+			}
+			$entity = $this->_entity;
+		}
+		foreach($this->_atributosMetadata as $propMeta){
+			$this->$propMeta->attrName = $entity->$propMeta->colName;
+		}
 	}
 	
 	/**
 	 * Carrega do Model na Entidade
 	 */
 	public function BindEntityModel(){
-		
+		if(is_null($this->_entity)){
+			throw new Exception('Não é possivel dar bind da entidade pois ela é nula', 500);
+		}
+		$entity = $this->_entity;
+		foreach($this->_atributosMetadata as $propMeta){
+			$entity->$propMeta->colName = $this->$propMeta->attrName;
+		}
 	}
 	
+	//Get/Save
+	
+	/**
+	 * Carrega a Entidade pelo ID (PK)
+	 * @param int $id
+	 * @return ReeverBaseModel
+	 */
+	public function getById($id){
+		$ret = $this->_entity->getById($id);
+		$this->BindModelEntity($ret);
+		return $this;
+	}
+	
+	/**
+	 * Persiste o Model
+	 * @return boolean
+	 */
+	public function save($obj = null){
+		
+		//formar o array com os valores do model
+		$data 	= array();
+		$pks 	= array();
+		$isNew 	= true;
+		foreach($this->_atributosMetadata as $propMeta){
+			if($propMeta->isPrimary){
+				$pks[$propMeta->colName.' = ?'] = $this->$propMeta->attrName;
+				if(is_null($this->$propMeta->attrName) || $this->$propMeta->attrName == ''){
+					$isNew = $isNew && true;
+				}else{
+					$isNew = $isNew && false;
+				}
+			}else{
+				$data[$propMeta->colName] = $this->$propMeta->attrName;	
+			}
+		}
+		
+		if($isNew){
+			$this->_entity->insert($data);
+		} else {
+			$this->_entity->update($data, $pks);
+		}
+		
+	}
 	
 	//ENTITY
 	
@@ -115,6 +172,7 @@ class ReeverBaseModel{
 	
 	public function SetEntity($et){
 		$this->_entity = $et;
+		$this->BindModelEntity();
 	}
 
 	
@@ -147,10 +205,18 @@ class ReeverBaseModel{
 	/* Metodos padroes para uso e tratamento dos Models */
 	//#########################
 	
+	/**
+	 * Retorna um metadata de um atributo especifico
+	 * @param string $attr
+	 */
 	public function getAttrMetadata($attr){
 		return @$this->_atributosMetadata[$attr->attrName];
 	}
 	
+	/**
+	 * Adicionar um metadata a um atributo especifico
+	 * @param ReeverAttributeMetadata $attr
+	 */
 	protected function addAtributosMetadata(ReeverAttributeMetadata $attr){
 		$this->_atributosMetadata[$attr->attrName] = $attr;
 	}

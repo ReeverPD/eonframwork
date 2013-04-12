@@ -149,6 +149,7 @@ class ReeverAttributeMetadata extends ReeverEventDispatcher{
 	public $isFK = false;
 	
 	
+	
 	/**
 	 * Construtor
 	 */
