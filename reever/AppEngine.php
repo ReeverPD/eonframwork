@@ -101,7 +101,6 @@ class Reever_AppEngine{
 		}catch (Exception $e){
 			//@TODO: Redirecionar para o 404 (Rota não encontrada) ...
 		}
-		
 		$loadPage = true;
 		if($route->sec->GetRequireAuth()){
 			$loadPage = $this->__secContext->isLogged() || $route->sec->getLoginRouteId() == $route_id;
@@ -140,7 +139,19 @@ class Reever_AppEngine{
 					$metodo = $view;
 				}
 				
-				if(is_file(ROOT.$folder.'/Controllers/'.$controller.'.php')){
+				//Verificar nas pastas se existe um controller especificado
+				$controllerExists = false;
+				foreach($this->__route->GetSearchFolders() as $folderSearch){
+					$folderSearch = str_replace("~", ROOT, $folderSearch);
+					if(is_file($folderSearch.'/Controllers/'.$controller.'.php')){
+						$controllerExists = true;
+						$folder = str_replace(ROOT, "", $folderSearch);
+						//$folder = $folderSearch;
+						break;
+					}
+				}
+				
+				if($controllerExists){
 					set_include_path(get_include_path() . PATH_SEPARATOR . ROOT.$folder.'/Models');
 					require_once('reever/mvc/ReeverBaseModel.php');
 					require_once('reever/mvc/Reever_Controller.php');
@@ -175,6 +186,8 @@ class Reever_AppEngine{
 				}else{
 					throw new Exception("{$controller} não encontrado na base de busca: ".ROOT.$folder, 500);
 				}
+				
+				
 			}else{
 				//@TODO: Fazer o funcionamento para rotas SEM MVC
 			}

@@ -76,10 +76,18 @@ class Reever_Routes {
 	
 	/**
 	 * Adiciona uma rota de procura para os arquivos de Views e controllers
-	 * @param unknown_type $folderPath
+	 * @param string $folderPath Folder Path
 	 */
 	public function AddSearchFolder($folderPath){
 		$this->_searchFolders[] = $folderPath;
+	}
+	
+	/**
+	 * Retorna as pastas de pesquisa
+	 * @return multitype:
+	 */
+	public function GetSearchFolders(){
+		return $this->_searchFolders;
 	}
 
 	public function IsSearchFolder($folder){
