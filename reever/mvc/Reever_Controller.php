@@ -147,6 +147,15 @@ require_once('reever/mvc/ViewParser.php');
  	}
 
  	/**
+ 	 * Redireciona para uma URL especifica
+ 	 * @param string $url
+ 	 */
+ 	public function RedirectToUrl($url){
+ 		header('location: '.$url);
+ 		exit();
+ 	}
+ 	
+ 	/**
  	 * @param string $id_route
  	 */
  	public function RedirectToRoute($id_route){

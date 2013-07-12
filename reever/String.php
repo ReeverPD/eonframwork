@@ -51,6 +51,11 @@
  */
 class Reever_String
 {
+	
+	static public function br2nl($text){
+		return $text;
+	}
+	
 	/**
 	 * Corta o texto para mostrar na listagem e colocar os 3 pontos.
 	 * 

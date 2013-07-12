@@ -228,12 +228,16 @@ class ReeverBaseModel{
 	 * @param mixed $val
 	 */
 	public function __set($prop, $val){
-		$propMetadata = $this->_atributosMetadata[$prop];
-		$propMetadata->Validate($val);
-		if($propMetadata->isValid){
-			throw new Exception($propMetadata->errMsg, $propMetadata->errCode);	
+		if(isset($this->_atributosMetadata[$prop])){
+			$propMetadata = $this->_atributosMetadata[$prop];
+			$propMetadata->Validate($val);
+			if($propMetadata->isValid){
+				throw new Exception($propMetadata->errMsg, $propMetadata->errCode);	
+			}
+		}else{
+			error_log("Deprecated Models, need to create Model Metadata");
+			$this->$prop = $val;
 		}
-		$this->$prop = $val;
 	}
 	
 	/**
